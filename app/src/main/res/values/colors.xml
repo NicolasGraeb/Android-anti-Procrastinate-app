@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="light_primary">#00796B</color>
+    <color name="light_onPrimary">#FFFFFF</color>
+    <color name="light_primaryContainer">#C5CAE9</color>
+    <color name="light_onPrimaryContainer">#00796B</color>
+    <color name="light_secondary">#009688</color>
+    <color name="light_onSecondary">#FFFFFF</color>
+    <color name="light_secondaryContainer">#B2DFDB</color>
+    <color name="light_onSecondaryContainer">#004D40</color>
+    <color name="light_background">#F8F8FF</color>
+    <color name="light_surface">#FFFFFF</color>
+    <color name="light_onBackground">#1C1B1F</color>
+    <color name="light_onSurface">#1C1B1F</color>
+    <color name="light_outline">#79747E</color>
+    <color name="dark_primary">#00796B</color>
+    <color name="dark_onPrimary">#00796B</color>
+    <color name="dark_primaryContainer">#00796B</color>
+    <color name="dark_onPrimaryContainer">#E8EAF6</color>
+    <color name="dark_secondary">#4DB6AC</color>
+    <color name="dark_onSecondary">#00695C</color>
+    <color name="dark_secondaryContainer">#00796B</color>
+    <color name="dark_onSecondaryContainer">#E0F2F1</color>
+    <color name="dark_background">#141218</color>
+    <color name="dark_surface">#141218</color>
+    <color name="dark_onBackground">#E6E0E9</color>
+    <color name="dark_onSurface">#E6E0E9</color>
+    <color name="dark_outline">#938F99</color>
+</resources>
