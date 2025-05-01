@@ -9,4 +9,9 @@
         <string name="theme_dark">Ciemny</string>
         <string name="theme_system">Domyślny systemowy</string>
     <string name="accessibility_service_description">Usługa wymagana do monitorowania uruchamianych aplikacji i blokowania wybranych przez Ciebie programów. Pozwala aplikacji ProcrastinateApp reagować, gdy próbujesz otworzyć zablokowaną aplikację.</string>
+
+    <string name="dialog_title_app_blocked">Aplikacja Zablokowana</string>
+    <string name="dialog_message_app_blocked">Wykryto próbę uruchomienia zablokowanej aplikacji.\n(Aplikacja: %1$s)\n\nŁączna liczba prób: %2$d</string>
+    <string name="dialog_message_app_blocked_no_pkg">Wykryto próbę uruchomienia zablokowanej aplikacji.\n\nŁączna liczba prób: %1$d</string>
+    <string name="dialog_button_ok">OK</string>
 </resources>

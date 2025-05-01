@@ -34,6 +34,7 @@ android {
 dependencies {
     implementation(libs.recyclerview)
     implementation(libs.appcompat)
+    implementation ("androidx.work:work-runtime:2.9.0")
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)

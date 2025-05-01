@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
     android:padding="12dp"
-    android:gravity="center_vertical"
     android:background="?android:attr/selectableItemBackground">
 
     <ImageView
         android:id="@+id/imageViewAppIcon"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:layout_marginEnd="12dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
         tools:src="@mipmap/ic_launcher"
         android:contentDescription="@string/app_icon_description" />
 
@@ -20,15 +20,112 @@
         android:id="@+id/textViewAppName"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="8dp"
         android:textAppearance="?attr/textAppearanceBodyLarge"
-        tools:text="Nazwa Aplikacji" />
+        app:layout_constraintBottom_toBottomOf="@+id/imageViewAppIcon"
+        app:layout_constraintEnd_toStartOf="@+id/imageArrowExpand"
+        app:layout_constraintStart_toEndOf="@+id/imageViewAppIcon"
+        app:layout_constraintTop_toTopOf="@+id/imageViewAppIcon"
+        tools:text="Bardzo Długa Nazwa Aplikacji Która Może Się Zawijać" />
 
-    <CheckBox
-        android:id="@+id/checkBoxBlocked"
-        android:layout_width="wrap_content"
+
+    <ImageView
+        android:id="@+id/imageArrowExpand"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        app:layout_constraintBottom_toBottomOf="@+id/imageViewAppIcon"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/imageViewAppIcon"
+        app:srcCompat="@drawable/ic_arrow_down"
+        app:tint="?attr/colorOnSurface" />
+
+    <LinearLayout
+        android:id="@+id/expandableLayout"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp" />
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:layout_marginTop="8dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:background="?attr/colorSurfaceContainerLowest"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/imageViewAppIcon"
+        tools:visibility="visible">
 
+        <CheckBox
+            android:id="@+id/checkBoxBlocked"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Zablokuj aplikację"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"/>
 
-</LinearLayout>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ustaw dzienny limit czasu:"
+            android:textAppearance="?attr/textAppearanceLabelMedium"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginTop="8dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp">
+
+            <EditText
+                android:id="@+id/editTextHours"
+                android:layout_width="60dp"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:maxLength="2"
+                android:gravity="center"
+                android:hint="H" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="h"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="16dp" />
+
+            <EditText
+                android:id="@+id/editTextMinutes"
+                android:layout_width="60dp"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:maxLength="2"
+                android:gravity="center"
+                android:hint="Min" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="min"
+                android:layout_marginStart="4dp"/>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+
+            <Button
+                android:id="@+id/buttonSaveLimit"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Zapisz" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,3 +1,4 @@
+
 package com.app.pro;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -8,6 +9,9 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import androidx.appcompat.app.AlertDialog;
+import android.content.DialogInterface;
+
 
 public class SettingsActivity extends AppCompatActivity {
 
@@ -39,7 +43,6 @@ public class SettingsActivity extends AppCompatActivity {
             return;
         }
 
-
         prefs = getSharedPreferences(MyApp.PREFS_NAME, Context.MODE_PRIVATE);
 
         loadCurrentThemeSelection();
@@ -63,7 +66,7 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void setupThemeSelectionListener() {
-
+        radioGroupTheme.setOnCheckedChangeListener(null);
         radioGroupTheme.setOnCheckedChangeListener((group, checkedId) -> {
             String selectedThemePref;
             if (checkedId == R.id.radioLight) selectedThemePref = MyApp.THEME_LIGHT;
@@ -77,5 +80,6 @@ public class SettingsActivity extends AppCompatActivity {
                 MyApp.setTheme(selectedThemePref);
             }
         });
+        loadCurrentThemeSelection();
     }
 }

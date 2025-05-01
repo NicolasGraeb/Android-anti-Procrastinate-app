@@ -1,29 +1,33 @@
-package com.app.pro; // Twój poprawny pakiet
+package com.app.pro;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.appcompat.widget.Toolbar;
 
+import android.app.AppOpsManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
-import android.provider.Settings; // Import dla Settings
+import android.os.Process;
+import android.provider.Settings;
 import android.text.Editable;
-import android.text.TextUtils; // Import dla TextUtils
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View; // Import dla View
+import android.view.View;
 import android.widget.EditText;
-import android.widget.Toast; // Import dla Toast
+import android.widget.Toast;
 
-import com.google.android.material.snackbar.Snackbar; // Import dla Snackbar
+import com.google.android.material.snackbar.Snackbar;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,8 +36,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-
-public class MainActivity extends AppCompatActivity implements AppAdapter.OnAppBlockedStateChangedListener {
+public class MainActivity extends AppCompatActivity implements AppAdapter.OnAppSettingsChangedListener {
 
     private RecyclerView recyclerView;
     private EditText editTextSearch;
@@ -43,12 +46,11 @@ public class MainActivity extends AppCompatActivity implements AppAdapter.OnAppB
     private Toolbar toolbar;
     private static final String TAG = "MainActivity";
 
-
     private SharedPreferences prefs;
     private Set<String> blockedPackagesSet;
     private static final String PREF_BLOCKED_APPS_SET = "blocked_packages_set";
     private static final String PREFS_NAME = "settings_prefs";
-
+    private static final String KEY_LIMIT_PREFIX = "limit_";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,7 +71,7 @@ public class MainActivity extends AppCompatActivity implements AppAdapter.OnAppB
         }
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         loadBlockedAppsSet();
-        checkAndPromptAccessibility();
+        checkAndPromptSpecialPermissions();
 
         installedApps = new ArrayList<>();
         filteredApps = new ArrayList<>();
@@ -77,12 +79,77 @@ public class MainActivity extends AppCompatActivity implements AppAdapter.OnAppB
         setupRecyclerView();
         setupSearch();
         loadInstalledApps();
+
+        handleIntentForDialog(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+
+        Log.d(TAG, ">>> onNewIntent called. Intent Action: " + intent.getAction() + ", Extras: " + intent.getExtras());
+        setIntent(intent);
+        handleIntentForDialog(intent);
+    }
+
+
+    private void handleIntentForDialog(Intent intent) {
+
+        Log.d(TAG, ">>> handleIntentForDialog called. Checking Intent: " + intent);
+        if (intent != null) {
+
+            boolean triggered = intent.getBooleanExtra("block_triggered", false);
+            int count = intent.getIntExtra("attempt_count", -1);
+            String blockedPackage = intent.getStringExtra("blocked_package_name");
+            Log.d(TAG, "handleIntentForDialog: Intent extras read - block_triggered=" + triggered + ", attempt_count=" + count + ", blocked_package=" + blockedPackage);
+
+
+            if (triggered) {
+                Log.d(TAG, "handleIntentForDialog: Block WAS triggered! Calling showBlockAttemptDialog...");
+                showBlockAttemptDialog(count, blockedPackage);
+
+                intent.removeExtra("block_triggered");
+            } else {
+                Log.d(TAG, "handleIntentForDialog: 'block_triggered' extra was false or missing.");
+            }
+        } else {
+            Log.d(TAG, "handleIntentForDialog: Intent was null.");
+        }
+    }
+
+    // Na początku metody showBlockAttemptDialog:
+    private void showBlockAttemptDialog(int attemptCount, String blockedPackage) {
+        // Loguj wejście do metody i przekazane parametry
+        Log.d(TAG, ">>> showBlockAttemptDialog called. Count: " + attemptCount + ", Pkg: " + blockedPackage);
+        if (isFinishing() || isDestroyed()) {
+            Log.w(TAG, "showBlockAttemptDialog: Activity is finishing/destroyed, cannot show dialog.");
+            return;
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.dialog_title_app_blocked);
+
+        String message;
+        if (blockedPackage != null && !blockedPackage.isEmpty()) {
+            message = getString(R.string.dialog_message_app_blocked, blockedPackage, attemptCount);
+        } else {
+            message = getString(R.string.dialog_message_app_blocked_no_pkg, attemptCount);
+        }
+
+        builder.setMessage(message);
+        builder.setPositiveButton(R.string.dialog_button_ok, (dialog, which) -> dialog.dismiss());
+        builder.setCancelable(false);
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+        Log.d(TAG, "showBlockAttemptDialog: dialog.show() called.");
     }
 
     private void loadBlockedAppsSet() {
         blockedPackagesSet = new HashSet<>(prefs.getStringSet(PREF_BLOCKED_APPS_SET, new HashSet<>()));
         Log.d(TAG, "loadBlockedAppsSet: Loaded " + blockedPackagesSet.size() + " blocked packages.");
     }
+
     private void saveBlockedAppsSet() {
         prefs.edit().putStringSet(PREF_BLOCKED_APPS_SET, blockedPackagesSet).apply();
         Log.d(TAG, "saveBlockedAppsSet: Saved " + blockedPackagesSet.size() + " blocked packages.");
@@ -91,15 +158,36 @@ public class MainActivity extends AppCompatActivity implements AppAdapter.OnAppB
     @Override
     public void onBlockedStateChanged(String packageName, boolean isBlocked) {
         Log.d(TAG, "onBlockedStateChanged: Package " + packageName + ", isBlocked: " + isBlocked);
+
         if (isBlocked) {
             blockedPackagesSet.add(packageName);
         } else {
             blockedPackagesSet.remove(packageName);
+            Log.i(TAG, "Checkbox unchecked for " + packageName + ". Resetting limit and removing from over-limit set.");
+            prefs.edit().putInt(KEY_LIMIT_PREFIX + packageName, -1).apply();
+            Set<String> currentOverLimitSet = new HashSet<>(prefs.getStringSet(UsageCheckWorker.PREF_OVER_LIMIT_APPS_SET, new HashSet<>()));
+            if (currentOverLimitSet.remove(packageName)) {
+                prefs.edit().putStringSet(UsageCheckWorker.PREF_OVER_LIMIT_APPS_SET, currentOverLimitSet).apply();
+                Log.i(TAG, "Removed " + packageName + " from over-limit set because checkbox was unchecked.");
+            }
         }
         saveBlockedAppsSet();
-
     }
 
+    @Override
+    public void onLimitChanged(String packageName, int totalMinutes) {
+        Log.d(TAG, "onLimitChanged: Package " + packageName + ", totalMinutes: " + totalMinutes);
+        prefs.edit().putInt(KEY_LIMIT_PREFIX + packageName, totalMinutes).apply();
+
+        if (totalMinutes < 0) {
+            Log.d(TAG, "Limit removed via settings for " + packageName + ". Removing from over-limit set.");
+            Set<String> currentOverLimitSet = new HashSet<>(prefs.getStringSet(UsageCheckWorker.PREF_OVER_LIMIT_APPS_SET, new HashSet<>()));
+            if (currentOverLimitSet.remove(packageName)) {
+                prefs.edit().putStringSet(UsageCheckWorker.PREF_OVER_LIMIT_APPS_SET, currentOverLimitSet).apply();
+                Log.i(TAG, "Removed " + packageName + " from over-limit set via onLimitChanged.");
+            }
+        }
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -120,7 +208,7 @@ public class MainActivity extends AppCompatActivity implements AppAdapter.OnAppB
     private void setupRecyclerView() {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new AppAdapter(this, filteredApps);
-        adapter.setOnAppBlockedStateChangedListener(this);
+        adapter.setOnAppSettingsChangedListener(this);
         recyclerView.setAdapter(adapter);
         Log.d(TAG, "setupRecyclerView: RecyclerView setup complete with listener.");
     }
@@ -173,7 +261,8 @@ public class MainActivity extends AppCompatActivity implements AppAdapter.OnAppB
                         Drawable appIcon = pm.getApplicationIcon(packageInfo);
                         String packageName = packageInfo.packageName;
                         boolean isBlocked = blockedPackagesSet.contains(packageName);
-                        loadedMasterApps.add(new AppInfo(appName, appIcon, packageName, isBlocked));
+                        int limitMinutes = prefs.getInt(KEY_LIMIT_PREFIX + packageName, -1);
+                        loadedMasterApps.add(new AppInfo(appName, appIcon, packageName, isBlocked, limitMinutes));
                     } catch (Exception e) {
                         Log.e(TAG, "Error loading app info for " + (packageInfo!=null? packageInfo.packageName : "unknown") + ": " + e.getMessage());
                     }
@@ -191,34 +280,58 @@ public class MainActivity extends AppCompatActivity implements AppAdapter.OnAppB
         }).start();
     }
 
-    private void checkAndPromptAccessibility() {
-        if (!isAccessibilityServiceEnabled()) {
-            Log.w(TAG, "Accessibility Service is NOT enabled. Prompting user.");
+    private void checkAndPromptSpecialPermissions() {
+        boolean accessibilityEnabled = isAccessibilityServiceEnabled();
+        boolean usageStatsEnabled = hasUsageStatsPermission();
+        String message = "";
+
+        if (!accessibilityEnabled && !usageStatsEnabled) {
+            message = "Włącz usługę dostępności i dostęp do statystyk użycia, aby aplikacja działała poprawnie.";
+        } else if (!accessibilityEnabled) {
+            message = "Włącz usługę dostępności, aby blokowanie działało.";
+        } else if (!usageStatsEnabled) {
+            message = "Włącz dostęp do statystyk użycia, aby limit czasowy działał.";
+        }
+
+        if (!accessibilityEnabled || !usageStatsEnabled) {
+            Log.w(TAG, "Special permission(s) missing. Prompting user. Accessibility: " + accessibilityEnabled + ", UsageStats: " + usageStatsEnabled);
             View rootView = findViewById(android.R.id.content);
             if (rootView != null) {
-                Snackbar.make(rootView, "Włącz usługę dostępności, aby blokowanie działało.", Snackbar.LENGTH_INDEFINITE)
-                        .setAction("USTAWIENIA", view -> {
-                            Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
-                            try {
-                                startActivity(intent);
-                                Toast.makeText(this, "Znajdź 'ProcrastinateApp Blocker' i włącz usługę.", Toast.LENGTH_LONG).show();
-                            } catch (Exception e) {
-                                Log.e(TAG, "Could not open Accessibility Settings", e);
-                                Toast.makeText(this, "Nie można otworzyć ustawień dostępności.", Toast.LENGTH_SHORT).show();
-                            }
-                        })
-                        .show();
+                Snackbar snackbar = Snackbar.make(rootView, message, Snackbar.LENGTH_INDEFINITE);
+                snackbar.setAction("USTAWIENIA", view -> {
+                    if (!isAccessibilityServiceEnabled()) {
+                        Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+                        try {
+                            startActivity(intent);
+                            Toast.makeText(this, "Znajdź 'ProcrastinateApp Blocker' i włącz usługę.", Toast.LENGTH_LONG).show();
+                        } catch (Exception e) { Log.e(TAG, "Could not open Accessibility Settings", e); }
+                    } else {
+                        Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+                        try {
+                            startActivity(intent);
+                            Toast.makeText(this, "Znajdź 'ProcrastinateApp' i włącz dostęp.", Toast.LENGTH_LONG).show();
+                        } catch (Exception e) { Log.e(TAG, "Could not open Usage Access Settings", e); }
+                    }
+                });
+                snackbar.show();
             } else {
-                Toast.makeText(this, "Włącz usługę dostępności w Ustawieniach, aby blokowanie działało.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
             }
         } else {
-            Log.i(TAG, "Accessibility Service is enabled.");
+            Log.i(TAG, "Both Accessibility Service and Usage Stats access are enabled.");
         }
+    }
+
+    private boolean hasUsageStatsPermission() {
+        AppOpsManager appOps = (AppOpsManager) getSystemService(Context.APP_OPS_SERVICE);
+        if (appOps == null) { return false; }
+        int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
+                Process.myUid(), getPackageName());
+        return mode == AppOpsManager.MODE_ALLOWED;
     }
 
     private boolean isAccessibilityServiceEnabled() {
         int accessibilityEnabled = 0;
-
         final String serviceId = getPackageName() + "/" + AppBlockerService.class.getName();
         try {
             accessibilityEnabled = Settings.Secure.getInt(
@@ -246,5 +359,4 @@ public class MainActivity extends AppCompatActivity implements AppAdapter.OnAppB
         }
         return false;
     }
-
 }
